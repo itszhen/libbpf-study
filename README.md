@@ -26,10 +26,12 @@ new ideas or BPF features.
 
 ## exp_xdp
 
-`xdp` is an example written in Rust (using libbpf-rs). It attaches to
-the ingress path of networking device and logs the size of each packet,
-returning `XDP_PASS` to allow the packet to be passed up to the kernel’s
-networking stack.
+`xdp` is an example written in Rust (using libbpf-rs).
+It attaches to the ingress path of networking device,
+logs the size of each packet,
+parses the packet's Ethernet header, IP header, and TCP/UDP header,
+counts the number of IPv4 and IPv6 packets,
+returning `XDP_PASS` to allow the packet to be passed up to the kernel’s networking stack.
 
 ```shell
 $ cd exp_xdp
@@ -43,8 +45,31 @@ something like this:
 
 ```shell
 $ sudo cat /sys/kernel/debug/tracing/trace_pipe
-           <...>-823887  [000] d.s1 602386.079100: bpf_trace_printk: packet size: 75
-           <...>-823887  [000] d.s1 602386.079141: bpf_trace_printk: packet size: 66
-           <...>-2813507 [000] d.s1 602386.696702: bpf_trace_printk: packet size: 77
-           <...>-2813507 [000] d.s1 602386.696735: bpf_trace_printk: packet size: 66
+ systemd-resolve-533     [001] ..s11  1930.880170: bpf_trace_printk: === Packet Received ===
+ systemd-resolve-533     [001] ..s11  1930.880172: bpf_trace_printk: packet size: 307
+ systemd-resolve-533     [001] ..s11  1930.880172: bpf_trace_printk: Ethernet Header:
+ systemd-resolve-533     [001] ..s11  1930.880173: bpf_trace_printk:   Destination: 00:00:00:00:00:00
+ systemd-resolve-533     [001] ..s11  1930.880174: bpf_trace_printk:   Source: 00:00:00:00:00:00
+ systemd-resolve-533     [001] ..s11  1930.880175: bpf_trace_printk:   Type: 0x0800
+ systemd-resolve-533     [001] ..s11  1930.880175: bpf_trace_printk: It is an IPv4 Packect
+ systemd-resolve-533     [001] ..s11  1930.880175: bpf_trace_printk: IP Header:
+ systemd-resolve-533     [001] ..s11  1930.880176: bpf_trace_printk:   Version: 4, IHL: 5
+ systemd-resolve-533     [001] ..s11  1930.880176: bpf_trace_printk:   TOS: 0, Total Length: 293
+ systemd-resolve-533     [001] ..s11  1930.880177: bpf_trace_printk:   TTL: 1, Protocol: 17
+ systemd-resolve-533     [001] ..s11  1930.880178: bpf_trace_printk:   Source: 127.0.0.53
+ systemd-resolve-533     [001] ..s11  1930.880179: bpf_trace_printk:   Destination: 127.0.0.1
+ systemd-resolve-533     [001] ..s11  1930.880179: bpf_trace_printk: UDP Header:
+ systemd-resolve-533     [001] ..s11  1930.880179: bpf_trace_printk:   Source Port: 53
+ systemd-resolve-533     [001] ..s11  1930.880180: bpf_trace_printk:   Dest Port: 41810
+ systemd-resolve-533     [001] ..s11  1930.880180: bpf_trace_printk:   Length: 273
+
+$ sudo bpftool map dump name xdp_stats_map
+[{
+        "key": 0,
+        "value": 489
+    },{
+        "key": 1,
+        "value": 0
+    }
+]
 ```
