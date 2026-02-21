@@ -1,5 +1,5 @@
-# libbpf-study My learning branch for studying the scaffolding of libbpf/BPF CO-RE.
-Original repository: libbpf/libbpf-bootstrap
+# libbpf-study: Exploring libbpf/BPF CO-RE framework
+Originally from: libbpf/libbpf-bootstrap
 
 Make sure you have cloned this repo using `--recurse` and installed the dependencies
 before you try to build the examples.
@@ -62,7 +62,12 @@ $ sudo cat /sys/kernel/debug/tracing/trace_pipe
  systemd-resolve-533     [001] ..s11  1930.880179: bpf_trace_printk:   Source Port: 53
  systemd-resolve-533     [001] ..s11  1930.880180: bpf_trace_printk:   Dest Port: 41810
  systemd-resolve-533     [001] ..s11  1930.880180: bpf_trace_printk:   Length: 273
+```
 
+The `xdp` counter map in `xdp_stats_map` should look
+something like this:
+
+```shell
 $ sudo bpftool map dump name xdp_stats_map
 [{
         "key": 0,
@@ -75,8 +80,6 @@ $ sudo bpftool map dump name xdp_stats_map
 ```
 
 ## xdp_blacklist
-
-blacklist is an example written in Rust using libbpf-rs. It dynamically manages a blacklist of IP addresses. The program attaches to the ingress path of a network device, logging the size and type of each packet. If a packet's IP address is found in the blacklist, it returns XDP_ABORTED to deny the packet. If the packet is not an IP packet, or its IP is not in the blacklist, it returns XDP_PASS to allow the packet to be passed up to the kernel's networking stack. Additionally, it counts the number of IPv4 and IPv6 packets.
 
 `blacklist` is an example written in Rust (using libbpf-rs) dynamically manages a blacklist of IP adresses.
 It attaches to the ingress path of a network device, logging the size and type of each packet.
@@ -105,7 +108,11 @@ SUBCOMMANDS:
     list-ipv4      List all denied IPv4 addresses
     list-ipv6      List all denied IPv6 addresses
     run            Run the XDP program
+```
 
+adding and listing denied IPv4 and IPv6 addresses:
+
+```shell
 $ sudo ./target/release/xdp add-ipv4 0.0.0.0/0
 Added 0.0.0.0/0 to denied IPv4 list
 
@@ -119,15 +126,20 @@ Added ::1/64 to denied IPv6 list
 $ sudo ./target/release/xdp list-ipv6
 Denied IPv6 list:
   ::1/64
+```
 
+running the XDP program:
+
+```shell
 $ sudo ./target/release/xdp run 1
 IPv4 packets: 0, IPv6 packets: 0
 IPv4 packets: 0, IPv6 packets: 0
 IPv4 packets: 0, IPv6 packets: 0
+```
 
-$ sudo ./target/release/xdp run 1
-IPv4 packets: 0, IPv6 packets: 0
+deleting denied IPv4 addresses and the packet counter can increase:
 
+```shell
 $ sudo ./target/release/xdp delete-ipv4 0.0.0.0/0
 Deleted 0.0.0.0/0 from denied IPv4 list
 
