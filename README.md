@@ -73,3 +73,67 @@ $ sudo bpftool map dump name xdp_stats_map
     }
 ]
 ```
+
+## xdp_blacklist
+
+blacklist is an example written in Rust using libbpf-rs. It dynamically manages a blacklist of IP addresses. The program attaches to the ingress path of a network device, logging the size and type of each packet. If a packet's IP address is found in the blacklist, it returns XDP_ABORTED to deny the packet. If the packet is not an IP packet, or its IP is not in the blacklist, it returns XDP_PASS to allow the packet to be passed up to the kernel's networking stack. Additionally, it counts the number of IPv4 and IPv6 packets.
+
+`blacklist` is an example written in Rust (using libbpf-rs) dynamically manages a blacklist of IP adresses.
+It attaches to the ingress path of a network device, logging the size and type of each packet.
+If a packet's IP address is found in the blacklist, it returning `XDP_ABORTED` to deny the packet.
+If the packet is not an IP packet, or its IP is not in the blacklist, it returning `XDP_PASS` to allow the packet to be passed up to the kernel’s networking stack. Additionally, it counts the number of IPv4 and IPv6 packets.
+
+```shell
+$ cd xdp_blacklist
+$ cargo build --release
+$ sudo ./target/release/xdp
+xdp 0.1.0
+
+USAGE:
+    xdp <SUBCOMMAND>
+
+FLAGS:
+    -h, --help       Prints help information
+    -V, --version    Prints version information
+
+SUBCOMMANDS:
+    add-ipv4       Add an IPv4 address or CIDR to the denied list
+    add-ipv6       Add an IPv6 address or CIDR to the denied list
+    delete-ipv4    Delete an IPv4 address or CIDR from the denied list
+    delete-ipv6    Delete an IPv6 address or CIDR from the denied list
+    help           Prints this message or the help of the given subcommand(s)
+    list-ipv4      List all denied IPv4 addresses
+    list-ipv6      List all denied IPv6 addresses
+    run            Run the XDP program
+
+$ sudo ./target/release/xdp add-ipv4 0.0.0.0/0
+Added 0.0.0.0/0 to denied IPv4 list
+
+$ sudo ./target/release/xdp list-ipv4
+Denied IPv4 list:
+  0.0.0.0/0
+
+$ sudo ./target/release/xdp add-ipv6 ::1/64
+Added ::1/64 to denied IPv6 list
+
+$ sudo ./target/release/xdp list-ipv6
+Denied IPv6 list:
+  ::1/64
+
+$ sudo ./target/release/xdp run 1
+IPv4 packets: 0, IPv6 packets: 0
+IPv4 packets: 0, IPv6 packets: 0
+IPv4 packets: 0, IPv6 packets: 0
+
+$ sudo ./target/release/xdp run 1
+IPv4 packets: 0, IPv6 packets: 0
+
+$ sudo ./target/release/xdp delete-ipv4 0.0.0.0/0
+Deleted 0.0.0.0/0 from denied IPv4 list
+
+$ sudo ./target/release/xdp run 1
+IPv4 packets: 0, IPv6 packets: 0
+IPv4 packets: 0, IPv6 packets: 0
+IPv4 packets: 0, IPv6 packets: 0
+Pv4 packets: 30, IPv6 packets: 0
+```
