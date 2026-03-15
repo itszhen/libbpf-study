@@ -31,7 +31,7 @@ It attaches to the ingress path of networking device,
 logs the size of each packet,
 parses the packet's Ethernet header, IP header, and TCP/UDP header,
 counts the number of IPv4 and IPv6 packets,
-returning `XDP_PASS` to allow the packet to be passed up to the kernel’s networking stack.
+returning `XDP_PASS` to allow the packet to be passed up to the kernel's networking stack.
 
 ```shell
 $ cd exp_xdp
@@ -81,10 +81,10 @@ $ sudo bpftool map dump name xdp_stats_map
 
 ## xdp_blacklist
 
-`blacklist` is an example written in Rust (using libbpf-rs) dynamically manages a blacklist of IP adresses.
+`blacklist` is an example written in Rust (using libbpf-rs) that dynamically manages a blacklist of IP addresses.
 It attaches to the ingress path of a network device, logging the size and type of each packet.
-If a packet's IP address is found in the blacklist, it returning `XDP_ABORTED` to deny the packet.
-If the packet is not an IP packet, or its IP is not in the blacklist, it returning `XDP_PASS` to allow the packet to be passed up to the kernel’s networking stack. Additionally, it counts the number of IPv4 and IPv6 packets.
+If a packet's IP address is found in the blacklist, it returns `XDP_ABORTED` to deny the packet.
+If the packet is not an IP packet, or its IP is not in the blacklist, it returns `XDP_PASS` to allow the packet to be passed up to the kernel's networking stack. Additionally, it counts the number of IPv4 and IPv6 packets.
 
 ```shell
 $ cd xdp_blacklist
@@ -110,7 +110,7 @@ SUBCOMMANDS:
     run            Run the XDP program
 ```
 
-adding and listing denied IPv4 and IPv6 addresses:
+Adding and listing denied IPv4 and IPv6 addresses:
 
 ```shell
 $ sudo ./target/release/xdp add-ipv4 0.0.0.0/0
@@ -128,7 +128,7 @@ Denied IPv6 list:
   ::1/64
 ```
 
-running the XDP program:
+Running the XDP program:
 
 ```shell
 $ sudo ./target/release/xdp run 1
@@ -137,7 +137,7 @@ IPv4 packets: 0, IPv6 packets: 0
 IPv4 packets: 0, IPv6 packets: 0
 ```
 
-deleting denied IPv4 addresses and the packet counter can increase:
+Deleting denied IPv4 addresses and the packet counter can increase:
 
 ```shell
 $ sudo ./target/release/xdp delete-ipv4 0.0.0.0/0
@@ -149,3 +149,37 @@ IPv4 packets: 0, IPv6 packets: 0
 IPv4 packets: 0, IPv6 packets: 0
 Pv4 packets: 30, IPv6 packets: 0
 ```
+
+## xdp_bridge
+
+`xdp_bridge` is an example written in Rust (using libbpf-rs) that demonstrates packet bridging functionality. It can forward packets between network interfaces, similar to a network switch. The program allows configuration of interface MAC addresses and bridging rules. When packets are received, it updates the source and destination MAC addresses according to the rules and forwards them.
+
+```shell
+$ cd xdp_bridge
+$ cargo build --release
+$ sudo ./target/release/xdp 2 --mac 02:00:00:00:00:02 --bridge-rule "02:00:00:00:00:01->02:00:00:00:00:02"
+Set interface 2 MAC: 02:00:00:00:00:02
+Added bridge rule: 02:00:00:00:00:01 -> 02:00:00:00:00:02
+XDP Bridge program loaded on interface 2
+Bridge rules configured:
+  02:00:00:00:00:01->02:00:00:00:00:02
+..........
+```
+
+This command loads the XDP bridge program on interface 2, sets the interface MAC address to 02:00:00:00:00:02, and adds a bridging rule: forward packets with source MAC address 02:00:00:00:00:01 to destination MAC address 02:00:00:00:00:02.
+
+The bridge rule format uses "->" to separate the source and destination MAC addresses, making it more readable: "source_mac->dest_mac".
+
+The program's output in `/sys/kernel/debug/tracing/trace_pipe` might look like this:
+
+```shell
+$ sudo cat /sys/kernel/debug/tracing/trace_pipe
+            <...>-3840345 [010] d... 3220701.101143: bpf_trace_printk: === Packet Received on Interface 2 ===
+            <...>-3840345 [010] d... 3220701.101144: bpf_trace_printk: Current MAC: 02:00:00:00:00:02
+            <...>-3840345 [010] d... 3220701.101145: bpf_trace_printk: Dest MAC: 02:00:00:00:00:01
+            <...>-3840345 [010] d... 3220701.101146: bpf_trace_printk: Source MAC: 02:00:00:00:00:01
+            <...>-3840345 [010] d... 3220701.101147: bpf_trace_printk: Packet Type: 0x0800
+            <...>-3840345 [010] d... 3220701.101148: bpf_trace_printk: Found bridge rule - forwarding packet
+```
+
+This program can be used in various scenarios such as network traffic monitoring, load balancing, or network security.
